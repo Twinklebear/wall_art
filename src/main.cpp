@@ -10,6 +10,7 @@
 #include <cstring>
 #include <wtypes.h>
 #include <windows.h>
+#include <ShellScalingAPI.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -23,8 +24,8 @@ struct GaussianKernel {
 	const float denom_sqr;
 	const float denom;
 
-	GaussianKernel(float sigma) : inv_two_sigma_sqr(1.f / (2.f * std::pow(sigma, 2.f))), denom_sqr(inv_two_sigma_sqr * (1.f / M_PI)),
-		denom(std::sqrt(denom_sqr))
+	GaussianKernel(float sigma) : inv_two_sigma_sqr(1.f / (2.f * std::pow(sigma, 2.f))),
+		denom_sqr(inv_two_sigma_sqr * (1.f / M_PI)), denom(std::sqrt(denom_sqr))
 	{}
 	float operator()(float x, float y) const {
 		return denom_sqr * std::exp(-inv_two_sigma_sqr * (std::pow(x, 2.f) + std::pow(y, 2.f)));
@@ -47,7 +48,8 @@ float linear_to_srgb(float v){
 
 // TODO: Make box blur performance independent of kernel dimensions following from
 // http://elynxsdk.free.fr/ext-docs/Blur/Fast_box_blur.pdf
-void box_blur(const unsigned char *img, unsigned char *out, const int img_w, const int img_h, const int kern_dim){
+void box_blur(const unsigned char *img, unsigned char *out, const int img_w,
+		const int img_h, const int kern_dim){
 	std::cout << "blurring image with " << kern_dim << "x" << kern_dim << " box kernel\n";
 	std::vector<unsigned char> x_blur(img_w * img_h * 3, 0);
 	const float weight = 1.0 / std::pow(2.0 * kern_dim, 2.0);
@@ -104,7 +106,8 @@ void gaussian_blur(const unsigned char *img, unsigned char *out, const int img_w
 	box_blur(blur_pong.data(), out, img_w, img_h, kern_dim);
 }
 
-void resize_image(const unsigned char *img, unsigned char *out, const int img_w, const int img_h, const int out_w, const int out_h){
+void resize_image(const unsigned char *img, unsigned char *out, const int img_w, const int img_h,
+		const int out_w, const int out_h){
 #pragma omp parallel for
 	for (int i = 0; i < out_w * out_h; ++i){
 		int ox = i % out_w;
@@ -133,7 +136,8 @@ void resize_image(const unsigned char *img, unsigned char *out, const int img_w,
 			float v11 = srgb_to_linear(static_cast<float>(img[(y * img_w + x) * 3 + c]) / 255.0);
 
 			// Now do the bilinear filtering
-			float v = v00 * (1.0 - fx) * (1.0 - fy) + v10 * fx * (1.0 - fy) + v01 * (1.0 - fx) * fy + v11 * fx * fy;
+			float v = v00 * (1.0 - fx) * (1.0 - fy) + v10 * fx * (1.0 - fy) + v01 * (1.0 - fx) * fy
+				+ v11 * fx * fy;
 
 			// Convert back to sRGB to save result
 			out[(oy * out_w + ox) * 3 + c] = static_cast<unsigned char>(linear_to_srgb(v) * 255.0);
@@ -164,9 +168,8 @@ void composite_background(const unsigned char *img, const unsigned char *back, u
 	}
 }
 
-void crop_image(const unsigned char *img, unsigned char *out, const int img_w, const int img_h, const int start_x, const int end_x,
-		const int start_y, const int end_y)
-{
+void crop_image(const unsigned char *img, unsigned char *out, const int img_w, const int img_h,
+		const int start_x, const int end_x, const int start_y, const int end_y){
 	const int out_w = end_x - start_x;
 	const int out_h = end_y - start_y;
 	std::cout << "cropping to " << out_w << "x" << out_h << "\n";
@@ -184,8 +187,10 @@ void crop_image(const unsigned char *img, unsigned char *out, const int img_w, c
 std::pair<int, int> desktop_resolution(){
 	RECT desktop_dim;
 	const HWND desktop = GetDesktopWindow();
+	HMONITOR monitor = MonitorFromWindow(desktop, MONITOR_DEFAULTTOPRIMARY);
 	GetWindowRect(desktop, &desktop_dim);
-	return std::make_pair<int, int>(desktop_dim.right, desktop_dim.bottom);
+	return std::make_pair<int, int>(static_cast<int>(desktop_dim.right),
+		static_cast<int>(desktop_dim.bottom));
 }
 
 int main(int argc, char** argv){
@@ -193,6 +198,10 @@ int main(int argc, char** argv){
 		std::cout << "Usage ./image_blur <image_file>\n";
 		return 1;
 	}
+	// Tell Windows we're DPI aware so we can get the true resolution of
+	// the display
+	SetProcessDpiAwareness(PROCESS_SYSTEM_DPI_AWARE);
+
 	const auto win_dim = desktop_resolution();
 	std::cout << "Desktop is " << win_dim.first << "x" << win_dim.second << " pixels\n";
 	const float desktop_aspect = static_cast<float>(win_dim.first) / win_dim.second;
@@ -222,7 +231,8 @@ int main(int argc, char** argv){
 	auto start = std::chrono::high_resolution_clock::now();
 	resize_image(img, scaled.data(), w, h, scaled_w, scaled_h);
 	auto end = std::chrono::high_resolution_clock::now();
-	std::cout << "resize took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	std::cout << "resize took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+		<< "ms\n";
 
 	if (!stbi_write_png("scaled.png", scaled_w, scaled_h, 3, scaled.data(), 0)){
 		std::cout << "Error saving the resulting image\n";
@@ -249,7 +259,8 @@ int main(int argc, char** argv){
 	start = std::chrono::high_resolution_clock::now();
 	crop_image(scaled.data(), cropped.data(), scaled_w, scaled_h, start_x, end_x, start_y, end_y);
 	end = std::chrono::high_resolution_clock::now();
-	std::cout << "crop took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	std::cout << "crop took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+		<< "ms\n";
 
 	if (!stbi_write_png("cropped.png", win_dim.first, win_dim.second, 3, cropped.data(), 0)){
 		std::cout << "Error saving the resulting image\n";
@@ -261,9 +272,11 @@ int main(int argc, char** argv){
 
 
 	start = std::chrono::high_resolution_clock::now();
-	gaussian_blur(cropped.data(), blurred.data(), win_dim.first, win_dim.second, kern_dim, GaussianKernel{kern_dim / 3.0});
+	gaussian_blur(cropped.data(), blurred.data(), win_dim.first, win_dim.second, kern_dim,
+			GaussianKernel{kern_dim / 3.0});
 	end = std::chrono::high_resolution_clock::now();
-	std::cout << "blur took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	std::cout << "blur took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+		<< "ms\n";
 
 	if (!stbi_write_png("blurred.png", win_dim.first, win_dim.second, 3, blurred.data(), 0)){
 		std::cout << "Error saving the resulting image\n";
@@ -272,12 +285,14 @@ int main(int argc, char** argv){
 	std::cout << "compositing original image with blurred background\n";
 	std::vector<unsigned char> composite(win_dim.first * win_dim.second * 3, 0);
 
-	// TODO: Decide on dimensions for the un-blurred center image and resize it then place it on the cropped background
+	// TODO: Decide on dimensions for the un-blurred center image and resize it then place it on
+	// the cropped background
 	/*
 	start = std::chrono::high_resolution_clock::now();
 	composite_background(img, cropped.data(), composite.data(), w, h, win_dim.first, win_dim.second);
 	end = std::chrono::high_resolution_clock::now();
-	std::cout << "compositing took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+	std::cout << "compositing took "
+		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
 
 	if (!stbi_write_png("composite.png", win_dim.first, win_dim.second, 3, composite.data(), 0)){
 		std::cout << "Error saving the resulting image\n";
