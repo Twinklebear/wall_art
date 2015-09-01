@@ -270,7 +270,6 @@ int main(int argc, char** argv){
 	std::vector<unsigned char> blurred(win_dim.first * win_dim.second * 3, 0);
 	const int kern_dim = 24;
 
-
 	start = std::chrono::high_resolution_clock::now();
 	gaussian_blur(cropped.data(), blurred.data(), win_dim.first, win_dim.second, kern_dim,
 			GaussianKernel{kern_dim / 3.0});
@@ -283,13 +282,34 @@ int main(int argc, char** argv){
 	}
 
 	std::cout << "compositing original image with blurred background\n";
-	std::vector<unsigned char> composite(win_dim.first * win_dim.second * 3, 0);
 
 	// TODO: Decide on dimensions for the un-blurred center image and resize it then place it on
 	// the cropped background
-	/*
+	int centered_w = 0;
+	int centered_h = 0;
+	float border_percent = 0.04;
+	if (desktop_aspect > image_aspect) {
+		centered_h = win_dim.second - border_percent * win_dim.second;
+		centered_w = centered_h * image_aspect;
+		std::cout << "border size of " << border_percent * win_dim.second << " along x\n";
+	}
+	else {
+		centered_w = win_dim.first - border_percent * win_dim.first;
+		centered_h = centered_w * (1.0 / image_aspect);
+		std::cout << "border size of " << border_percent * win_dim.first << " along y\n";
+	}
+	std::cout << "Centered image will be scaled to " << centered_w << "x" << centered_h << "\n";
+	std::vector<uint8_t> centered_image(centered_h * centered_w * 3, 0);
 	start = std::chrono::high_resolution_clock::now();
-	composite_background(img, cropped.data(), composite.data(), w, h, win_dim.first, win_dim.second);
+	resize_image(scaled.data(), centered_image.data(), scaled_w, scaled_h, centered_w, centered_h);
+	end = std::chrono::high_resolution_clock::now();
+	std::cout << "scaling centered image took "
+		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
+
+	std::vector<unsigned char> composite(win_dim.first * win_dim.second * 3, 0);
+	start = std::chrono::high_resolution_clock::now();
+	composite_background(centered_image.data(), blurred.data(), composite.data(), centered_w, centered_h,
+			win_dim.first, win_dim.second);
 	end = std::chrono::high_resolution_clock::now();
 	std::cout << "compositing took "
 		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
@@ -297,7 +317,6 @@ int main(int argc, char** argv){
 	if (!stbi_write_png("composite.png", win_dim.first, win_dim.second, 3, composite.data(), 0)){
 		std::cout << "Error saving the resulting image\n";
 	}
-	*/
 
 	stbi_image_free(img);
 	return 0;
