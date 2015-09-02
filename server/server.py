@@ -22,13 +22,6 @@ app.config.from_object(__name__)
 def index():
     return "Wall Art"
 
-images = [
-    {
-        "id": 1,
-        "name": "Forum"
-    }
-]
-
 def connect_db():
     return sqlite3.connect(app.config["DATABASE"])
 
@@ -52,7 +45,11 @@ def query_db(query, args=(), one=False):
 
 @app.route("/api/image", methods=["GET"])
 def get_images():
-    return jsonify({ "images": images })
+    images = []
+    for img in query_db("select * from entries"):
+        print("image id = {}, title = {}, file = {}".format(img[0], img[1], img[2]))
+        images.append({"id": img[0], "title": img[1], "filename": img[2]})
+    return jsonify({"images": images })
 
 @app.route("/api/image/<int:image_id>", methods=["GET"])
 def get_image(image_id):
