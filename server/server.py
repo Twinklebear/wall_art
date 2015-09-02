@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/python
 
 #from PIL import Image, ImageFilter
 
@@ -43,36 +43,54 @@ def query_db(query, args=(), one=False):
     cur.close()
     return (rv[0] if rv else None) if one else rv
 
+# Build a list of all images as an array of dicts, with one dict per image
+# to be easily returned as a JSON string
+def build_image_dict(query_result):
+    images = []
+    for img in query_result:
+        images.append({"id": img[0], "title": img[1], "artist": img[2],
+            "work_type": img[3], "culture": img[4], "has_nudity": img[5],
+            "filename": img[6], "blurred_filename": img[7]})
+    return images
+
 @app.route("/api/image", methods=["GET"])
 def get_images():
-    images = []
-    for img in query_db("select * from images"):
-        images.append({"id": img[0], "title": img[1], "artist": img[2], "work_type": img[3],
-            "culture": img[4], "has_nudity": img[5], "filename": img[6], "blurred_filename": img[7]})
+    images = build_image_dict(query_db("select * from images"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
 
 @app.route("/api/image/<int:image_id>", methods=["GET"])
 def get_image(image_id):
-    # Note: This assumes the image id is valid
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
-    return send_file(img[2], mimetype="image/jpeg")
+    return send_file(img[6], mimetype="image/jpeg")
+
+@app.route("/api/artist/<artist_name>")
+def get_artist_paintings(artist_name):
+    artist = query_db("select * from images where artist = ?", [artist_name])
+    if artist is None:
+        abort(404)
+    images = build_image_dict(artist)
+    return json.dumps(images, ensure_ascii=False).encode("utf8")
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_image():
     if request.method == "POST":
         f = request.files["file"]
         if f:
-            filename = os.path.join(app.config["UPLOAD_FOLDER"], secure_filename(f.filename))
+            filename = os.path.join(app.config["UPLOAD_FOLDER"],
+                    secure_filename(f.filename))
             f.save(filename)
-            if query_db("select * from images where title = ?", [request.form["title"]], one=True) is None:
+            if query_db("select * from images where title = ?",
+                    [request.form["title"]], one=True) is None:
                 db = get_db()
-                # TODO: We should actually have a check box for has nudity and also accept a second file upload for the
-                # blurred file
-                db.execute("""insert into images (title, artist, work_type, culture, has_nudity, filename, blurred_filename)
-                        values (?, ?, ?, ?, ?, ?, ?)""", [request.form["title"], request.form["artist"], request.form["work_type"],
-                            request.form["culture"], False, filename, filename])
+                # TODO: We should actually have a check box for has nudity and
+                # also accept a second file upload for the blurred file
+                db.execute("""insert into images (title, artist, work_type,
+                    culture, has_nudity, filename, blurred_filename)
+                    values (?, ?, ?, ?, ?, ?, ?)""", [request.form["title"],
+                        request.form["artist"], request.form["work_type"],
+                        request.form["culture"], False, filename, filename])
                 db.commit()
         return redirect("/upload")
 
