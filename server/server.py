@@ -9,7 +9,7 @@
 
 import sqlite3
 import os
-from flask import Flask, jsonify, send_file, g, request, redirect, abort
+from flask import Flask, json, send_file, g, request, redirect, abort
 from werkzeug.utils import secure_filename
 
 DATABASE = "database.db"
@@ -46,15 +46,15 @@ def query_db(query, args=(), one=False):
 @app.route("/api/image", methods=["GET"])
 def get_images():
     images = []
-    for img in query_db("select * from entries"):
-        print("image id = {}, title = {}, file = {}".format(img[0], img[1], img[2]))
-        images.append({"id": img[0], "title": img[1], "filename": img[2]})
-    return jsonify({"images": images })
+    for img in query_db("select * from images"):
+        images.append({"id": img[0], "title": img[1], "artist": img[2], "work_type": img[3],
+            "culture": img[4], "has_nudity": img[5], "filename": img[6], "blurred_filename": img[7]})
+    return json.dumps(images, ensure_ascii=False).encode("utf8")
 
 @app.route("/api/image/<int:image_id>", methods=["GET"])
 def get_image(image_id):
     # Note: This assumes the image id is valid
-    img = query_db("select * from entries where id = ?", [image_id], one=True)
+    img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
     return send_file(img[2], mimetype="image/jpeg")
@@ -66,10 +66,13 @@ def upload_image():
         if f:
             filename = os.path.join(app.config["UPLOAD_FOLDER"], secure_filename(f.filename))
             f.save(filename)
-            if query_db("select * from entries where title = ?", [request.form["title"]], one=True) is None:
+            if query_db("select * from images where title = ?", [request.form["title"]], one=True) is None:
                 db = get_db()
-                print("Will insert new image")
-                db.execute("insert into entries (title, filename) values (?, ?)", [request.form["title"], filename])
+                # TODO: We should actually have a check box for has nudity and also accept a second file upload for the
+                # blurred file
+                db.execute("""insert into images (title, artist, work_type, culture, has_nudity, filename, blurred_filename)
+                        values (?, ?, ?, ?, ?, ?, ?)""", [request.form["title"], request.form["artist"], request.form["work_type"],
+                            request.form["culture"], False, filename, filename])
                 db.commit()
         return redirect("/upload")
 
@@ -82,6 +85,15 @@ def upload_image():
            <input type=file name=file>
            <label>Title
            <input type=text name=title>
+           </label>
+           <label>Artist
+           <input type=text name=artist>
+           </label>
+           <label>Work Type
+           <input type=text name=work_type>
+           </label>
+           <label>Culture
+           <input type=text name=culture>
            </label>
            <input type=submit value=Upload>
         </p>
