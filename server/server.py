@@ -8,9 +8,12 @@
 #    blurred.save("blurred.jpg", "JPEG")
 
 import sqlite3
-from flask import Flask, jsonify, send_file, g
+import os
+from flask import Flask, jsonify, send_file, g, request, redirect, abort
+from werkzeug.utils import secure_filename
 
-DATABASE = "images.db"
+DATABASE = "database.db"
+UPLOAD_FOLDER = "./images/"
 
 app = Flask(__name__)
 app.config.from_object(__name__)
@@ -55,7 +58,38 @@ def get_images():
 def get_image(image_id):
     # Note: This assumes the image id is valid
     img = query_db("select * from entries where id = ?", [image_id], one=True)
+    if img is None:
+        abort(404)
     return send_file(img[2], mimetype="image/jpeg")
+
+@app.route("/upload", methods=["GET", "POST"])
+def upload_image():
+    if request.method == "POST":
+        f = request.files["file"]
+        if f:
+            filename = os.path.join(app.config["UPLOAD_FOLDER"], secure_filename(f.filename))
+            f.save(filename)
+            if query_db("select * from entries where title = ?", [request.form["title"]], one=True) is None:
+                db = get_db()
+                print("Will insert new image")
+                db.execute("insert into entries (title, filename) values (?, ?)", [request.form["title"], filename])
+                db.commit()
+        return redirect("/upload")
+
+    return """
+    <!DOCTYPE html5>
+    <title>Upload image</title>
+    </h1>Upload File</h1>
+    <form action="" method=post enctype=multipart/form-data>
+        <p>
+           <input type=file name=file>
+           <label>Title
+           <input type=text name=title>
+           </label>
+           <input type=submit value=Upload>
+        </p>
+    </form>
+    """
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
