@@ -12,6 +12,7 @@ external/
 *.bmp
 *.png
 *.jpg
+*.db
 
 stb_image.h
 stb_image_write.h
