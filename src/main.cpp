@@ -283,8 +283,6 @@ int main(int argc, char** argv){
 
 	std::cout << "compositing original image with blurred background\n";
 
-	// TODO: Decide on dimensions for the un-blurred center image and resize it then place it on
-	// the cropped background
 	int centered_w = 0;
 	int centered_h = 0;
 	float border_percent = 0.04;
