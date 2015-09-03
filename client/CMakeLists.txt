@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.12)
 project(WALL_ART)
 
 # Bump up warning levels appropriately for each compiler
@@ -16,6 +16,12 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 endif()
 
 set(WALL_ART_INSTALL_DIR "${WALL_ART_SOURCE_DIR}/bin")
+
+# Hack to find Qt on windows
+set(CMAKE_PREFIX_PATH "C:/Users/Will/libs/Qt/5.5/msvc2013_64/")
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
+find_package(Qt5Widgets)
 
 include_directories(include)
 add_subdirectory(src)

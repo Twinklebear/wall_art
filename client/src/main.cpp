@@ -11,6 +11,8 @@
 #include <wtypes.h>
 #include <windows.h>
 #include <ShellScalingAPI.h>
+#include <QApplication>
+#include <QPushButton>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -194,6 +196,11 @@ std::pair<int, int> desktop_resolution(){
 }
 
 int main(int argc, char** argv){
+	QApplication app(argc, argv);
+	QPushButton button("Hi");
+	button.show();
+	return app.exec();
+
 	if (argc < 2){
 		std::cout << "Usage ./image_blur <image_file>\n";
 		return 1;
