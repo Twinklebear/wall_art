@@ -195,16 +195,14 @@ std::pair<int, int> desktop_resolution(){
 		static_cast<int>(desktop_dim.bottom));
 }
 
-int main(int argc, char** argv){
+int main(int argc, char **argv){
 	if (argc < 2){
 		std::cout << "Usage ./image_blur <url>\n";
 		return 1;
 	}
-	std::unique_ptr<WallArtApp> app = std::make_unique<WallArtApp>(argc, argv);
-	QPushButton button("Hi");
-	button.show();
-	app->fetch_url(argv[1]);
-	return app->exec();
+	WallArtApp app{argc, argv};
+	app.fetch_url(argv[1]);
+	return app.exec();
 
 	if (argc < 2){
 		std::cout << "Usage ./image_blur <image_file>\n";

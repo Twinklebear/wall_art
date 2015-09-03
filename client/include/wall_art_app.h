@@ -2,20 +2,21 @@
 #define WALL_ART_APP_H
 
 #include <string>
+
 #include <QApplication>
-#include <QPushButton>
 #include <QNetworkAccessManager>
-#include <QNetworkRequest>
-#include <QNetworkReply>
-#include <QDebug>
-#include <QUrl>
+#include <QLabel>
 
 class WallArtApp : public QApplication {
 	Q_OBJECT
+
+	QLabel artist_name;
+	QNetworkAccessManager network_manager;
+
 public:
 	WallArtApp(int argc, char **argv);
-
 	void fetch_url(const std::string &url);
+
 public slots:
 	void requestReceived(QNetworkReply *reply);
 };
