@@ -18,10 +18,12 @@ endif()
 set(WALL_ART_INSTALL_DIR "${WALL_ART_SOURCE_DIR}/bin")
 
 # Hack to find Qt on windows
+# This should probably be changed eventually
 set(CMAKE_PREFIX_PATH "C:/Users/Will/libs/Qt/5.5/msvc2013_64/")
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5Widgets)
+find_package(Qt5Network)
 
 include_directories(include)
 add_subdirectory(src)
