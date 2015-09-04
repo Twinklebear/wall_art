@@ -21,7 +21,6 @@ public slots:
 	void requestReceived(QNetworkReply *reply);
 };
 
-#include "wall_art_app.moc"
 
 #endif
 
