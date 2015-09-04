@@ -53,7 +53,7 @@ def build_image_dict(query_result):
             "filename": img[6], "blurred_filename": img[7]})
     return images
 
-@app.route("/api/image", methods=["GET"])
+@app.route("/api/image/", methods=["GET"])
 def get_images():
     images = build_image_dict(query_db("select * from images"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
