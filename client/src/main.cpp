@@ -200,6 +200,7 @@ int main(int argc, char **argv){
 		std::cout << "Usage ./image_blur <url>\n";
 		return 1;
 	}
+	qRegisterMetaType<ImageResult>();
 	WallArtApp app{argc, argv};
 	app.fetch_url(argv[1]);
 	return app.exec();

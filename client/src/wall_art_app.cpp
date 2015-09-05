@@ -8,8 +8,9 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonDocument>
-#include <QImage>
+#include <QThreadPool>
 
+#include "image_downloader.h"
 #include "wall_art_app.h"
 
 WallArtApp::WallArtApp(int argc, char **argv)
@@ -19,11 +20,10 @@ WallArtApp::WallArtApp(int argc, char **argv)
 }
 void WallArtApp::fetch_url(const std::string &url){
 	std::cout << "Network request for " << url << " launching\n";
-	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(requestReceived(QNetworkReply*)));
+	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(request_received(QNetworkReply*)));
 	network_manager.get(QNetworkRequest(QUrl(QString::fromStdString(url))));
 }
-void WallArtApp::requestReceived(QNetworkReply *reply){
-	reply->deleteLater();
+void WallArtApp::request_received(QNetworkReply *reply){
 	if (reply->error() == QNetworkReply::NoError){
 		int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 		if (status >= 200 && status < 300){
@@ -36,17 +36,11 @@ void WallArtApp::requestReceived(QNetworkReply *reply){
 			std::cout << "success\n";
 			const QString content_type = content_type_header.toString();
 			if (content_type == "image/jpeg"){
-				const QVariant content_length_header = reply->header(QNetworkRequest::ContentLengthHeader);
-				if (!content_length_header.isValid() || !content_length_header.canConvert(QMetaType::Int)){
-					std::cout << "Error: JPEG missing valid content length header\n";
-					return;
-				}
-				int content_len = content_length_header.toInt();
-				const QByteArray reply_image = reply->readAll();
-				const QImage img = QImage::fromData(reinterpret_cast<const uint8_t*>(reply_image.data()), content_len, "JPEG");
-				std::cout << "Downloaded image of dimension " << img.width() << "x" << img.height() << ", saving to downloaded.jpg\n";
-				img.save(QString::fromStdString("downloaded.jpg"), "JPEG");
-				std::cout << "image saved\n";
+				// The ImageDownloader thread needs the reply for longer, so don't flag it for deletion
+				ImageDownloader *downloader = new ImageDownloader(reply);
+				connect(downloader, SIGNAL(finished(ImageResult)), this, SLOT(image_downloaded(ImageResult)));
+				QThreadPool::globalInstance()->start(downloader);
+				return;
 			}
 			else {
 				const QByteArray reply_text = reply->readAll();
@@ -71,6 +65,13 @@ void WallArtApp::requestReceived(QNetworkReply *reply){
 	else {
 		std::cout << "Error\n";
 	}
+	reply->deleteLater();
+}
+void WallArtApp::image_downloaded(ImageResult result){
+	std::cout << "Image with id " << result.id << " was fetched\n";
+	std::cout << "Saving to downloaded.jpg\n";
+	result.image->save(QString::fromStdString("downloaded.jpg"), "JPEG");
+	std::cout << "image saved\n";
 }
 
 #include "../include/moc_wall_art_app.cpp"
