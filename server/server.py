@@ -53,17 +53,27 @@ def build_image_dict(query_result):
             "filename": img[6], "blurred_filename": img[7]})
     return images
 
+# API endpoint to get list of all images on server
 @app.route("/api/image/", methods=["GET"])
 def get_images():
     images = build_image_dict(query_db("select * from images"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
 
+# API endpoint to get original image with some id
 @app.route("/api/image/<int:image_id>", methods=["GET"])
 def get_image(image_id):
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
     return send_file(img[6], mimetype="image/jpeg")
+
+# API endpoint to get blurred image with some id
+@app.route("/api/blurred/<int:image_id>", methods=["GET"])
+def get_blurred_image(image_id):
+    img = query_db("select * from images where id = ?", [image_id], one=True)
+    if img is None:
+        abort(404)
+    return send_file(img[7], mimetype="image/jpeg")
 
 @app.route("/api/artist/<artist_name>")
 def get_artist_paintings(artist_name):
@@ -77,10 +87,14 @@ def get_artist_paintings(artist_name):
 def upload_image():
     if request.method == "POST":
         f = request.files["file"]
-        if f:
+        bf = request.files["blurred_file"]
+        if f and bf:
             filename = os.path.join(app.config["UPLOAD_FOLDER"],
                     secure_filename(f.filename))
+            blurred_filename = os.path.join(app.config["UPLOAD_FOLDER"],
+					secure_filename(bf.filename))
             f.save(filename)
+            bf.save(blurred_filename)
             if query_db("select * from images where title = ?",
                     [request.form["title"]], one=True) is None:
                 db = get_db()
@@ -90,7 +104,7 @@ def upload_image():
                     culture, has_nudity, filename, blurred_filename)
                     values (?, ?, ?, ?, ?, ?, ?)""", [request.form["title"],
                         request.form["artist"], request.form["work_type"],
-                        request.form["culture"], False, filename, filename])
+                        request.form["culture"], False, filename, blurred_filename])
                 db.commit()
         return redirect("/upload")
 
@@ -100,7 +114,12 @@ def upload_image():
     </h1>Upload File</h1>
     <form action="" method=post enctype=multipart/form-data>
         <p>
+		   <label>Original Image
            <input type=file name=file>
+		   </label>
+		   <label>Blurred Image
+           <input type=file name=blurred_file>
+		   </label>
            <label>Title
            <input type=text name=title>
            </label>
@@ -119,5 +138,5 @@ def upload_image():
     """
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    app.run(debug=True)
 
