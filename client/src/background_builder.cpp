@@ -1,18 +1,15 @@
 #include <cassert>
 #include <iostream>
 #include <chrono>
-#include <wtypes.h>
-#include <windows.h>
-#include <ShellScalingAPI.h>
+#include <QRect>
+#include <QApplication>
+#include <QDesktopWidget>
 
 #include "background_builder.h"
 
-std::pair<int, int> desktop_resolution(){
-	RECT desktop_dim;
-	const HWND desktop = GetDesktopWindow();
-	GetWindowRect(desktop, &desktop_dim);
-	return std::make_pair<int, int>(static_cast<int>(desktop_dim.right),
-		static_cast<int>(desktop_dim.bottom));
+template<typename T>
+T clamp(T v, T min, T max) {
+	return v < min ? min : v > max ? max : v;
 }
 float srgb_to_linear(float v){
 	return v <= 0.04045 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
@@ -109,9 +106,9 @@ BackgroundBuilder::BackgroundBuilder(std::shared_ptr<QImage> original, std::shar
 void BackgroundBuilder::run(){
 	original->save(QString("original.jpg"), "JPEG");
 	blurred->save(QString("blurred.jpg"), "JPEG");
-	const auto win_dim = desktop_resolution();
-	std::cout << "Desktop is " << win_dim.first << "x" << win_dim.second << " pixels\n";
-	const float desktop_aspect = static_cast<float>(win_dim.first) / win_dim.second;
+	const QRect win_dim = QApplication::desktop()->screenGeometry();
+	std::cout << "Desktop is: " << win_dim.width() << "x" << win_dim.height() << "\n";
+	const float desktop_aspect = static_cast<float>(win_dim.width()) / win_dim.height();
 
 	const float image_aspect = static_cast<float>(original->width()) / original->height();
 	std::cout << "Desktop aspect = " << desktop_aspect << ", image = " << image_aspect << "\n";
@@ -121,11 +118,11 @@ void BackgroundBuilder::run(){
 	int scaled_w = 0;
 	int scaled_h = 0;
 	if (desktop_aspect < image_aspect){
-		scaled_h = win_dim.second + 32;
+		scaled_h = win_dim.height() + 32;
 		scaled_w = scaled_h * image_aspect;
 	}
 	else {
-		scaled_w = win_dim.first + 32;
+		scaled_w = win_dim.width() + 32;
 		scaled_h = scaled_w * (1.0 / image_aspect);
 	}
 	std::cout << "scaling image to " << scaled_w << "x" << scaled_h << "\n";
@@ -139,24 +136,24 @@ void BackgroundBuilder::run(){
 
 	scaled_background.save(QString("scaled_background.jpg"), "JPEG");
 
-	int crop_x = (scaled_w - win_dim.first) / 2;
+	int crop_x = (scaled_w - win_dim.width()) / 2;
 	int start_x = crop_x;
 	int end_x = scaled_w - crop_x;
 	// Sometimes our crop may be off by a few pixels, so just drop the extra ones if we don't match
-	if (end_x - start_x != win_dim.first){
-		std::cout << "width mismatch of " << end_x - start_x - win_dim.first << "pixels\n";
-		end_x -= end_x - start_x - win_dim.first;
+	if (end_x - start_x != win_dim.width()){
+		std::cout << "width mismatch of " << end_x - start_x - win_dim.width() << "pixels\n";
+		end_x -= end_x - start_x - win_dim.width();
 	}
 
-	int crop_y = (scaled_h - win_dim.second) / 2;
+	int crop_y = (scaled_h - win_dim.height()) / 2;
 	int start_y = crop_y;
 	int end_y = scaled_h - crop_y;
-	if (end_y - start_y != win_dim.second){
-		std::cout << "height mismatch of " << end_y - start_y - win_dim.second << "pixels\n";
-		end_y -= end_y - start_y - win_dim.second;
+	if (end_y - start_y != win_dim.height()){
+		std::cout << "height mismatch of " << end_y - start_y - win_dim.height() << "pixels\n";
+		end_y -= end_y - start_y - win_dim.height();
 	}
 
-	QSharedPointer<QImage> background(new QImage{win_dim.first, win_dim.second, QImage::Format_RGB32});
+	QSharedPointer<QImage> background(new QImage{win_dim.width(), win_dim.height(), QImage::Format_RGB32});
 	start = std::chrono::high_resolution_clock::now();
 	crop_image(scaled_background, *background, start_x, end_x, start_y, end_y);
 	end = std::chrono::high_resolution_clock::now();
@@ -171,14 +168,14 @@ void BackgroundBuilder::run(){
 	int centered_h = 0;
 	float border_percent = 0.04f;
 	if (desktop_aspect > image_aspect) {
-		centered_h = win_dim.second - border_percent * win_dim.second;
+		centered_h = win_dim.height() - border_percent * win_dim.height();
 		centered_w = centered_h * image_aspect;
-		std::cout << "border size of " << border_percent * win_dim.second << " along x\n";
+		std::cout << "border size of " << border_percent * win_dim.height() << " along x\n";
 	}
 	else {
-		centered_w = win_dim.first - border_percent * win_dim.first;
+		centered_w = win_dim.width() - border_percent * win_dim.width();
 		centered_h = centered_w * (1.0 / image_aspect);
-		std::cout << "border size of " << border_percent * win_dim.first << " along y\n";
+		std::cout << "border size of " << border_percent * win_dim.width() << " along y\n";
 	}
 	std::cout << "Centered image will be scaled to " << centered_w << "x" << centered_h << "\n";
 	QImage centered_image{centered_w, centered_h,  QImage::Format_RGB32};

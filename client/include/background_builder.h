@@ -7,11 +7,6 @@
 #include <QRunnable>
 #include <QImage>
 
-template<typename T>
-T clamp(T v, T min, T max){
-	return v < min ? min : v > max ? max : v;
-}
-
 // The background builder takes two images and composes them into
 // the wallpaper we're generating. The background is the blurred image
 // and the original image will be placed centered on top of it
@@ -27,6 +22,7 @@ public:
 signals:
 	void finished(QSharedPointer<QImage> background);
 };
+
 Q_DECLARE_METATYPE(QSharedPointer<QImage>);
 
 #endif

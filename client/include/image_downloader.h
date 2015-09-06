@@ -16,6 +16,7 @@ struct ImageResult {
 	ImageResult();
 	ImageResult(int id, bool blurred, std::shared_ptr<QImage> image);
 };
+
 Q_DECLARE_METATYPE(ImageResult);
 
 // The ImageDownloader is used to move the task of reading the image
