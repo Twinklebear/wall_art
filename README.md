@@ -18,7 +18,7 @@ This wallpaper was generated from [Landscape with Classical Ruins and Figures](h
 
 ### Client
 
-The client is written and C++ and requires [Qt5](http://www.qt.io/).
+The client is written in C++ and requires [Qt5](http://www.qt.io/).
 
 ### Server
 
