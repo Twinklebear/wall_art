@@ -38,7 +38,7 @@ void resize_image(const QImage &img, QImage &out){
 		const uint8_t *img_scanline = img.scanLine(iy);
 		uint8_t *out_scanline = out.scanLine(oy);
 		// This is just nearest neighbor filtering with sRGB correction
-		for (int c = 0; c < 3; ++c){
+		for (int c = 0; c < 4; ++c){
 			// Convert to linear space to do the filtering
 			int x = ix;
 			int y = iy;
@@ -75,7 +75,7 @@ void composite_background(const QImage &img, const QImage &back, QImage &out){
 		const int oy = i / back.width();
 		const uint8_t *back_scanline = back.scanLine(oy);
 		uint8_t *out_scanline = out.scanLine(oy);
-		for (int c = 0; c < 3; ++c){
+		for (int c = 0; c < 4; ++c){
 			if (ox < offset_x || ox >= back.width() - offset_x - 1 || oy < offset_y || oy >= back.height() - offset_y - 1){
 				out_scanline[ox * 4 + c] = back_scanline[ox * 4 + c];
 			}
