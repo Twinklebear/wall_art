@@ -22,5 +22,6 @@ The client is written and C++ and requires [Qt5](http://www.qt.io/).
 
 ### Server
 
-The server is written in Python and requires [Flask](http://flask.pocoo.org/) 
+The server is written in Python and requires [Flask](http://flask.pocoo.org/), [sqlite](https://www.sqlite.org/) is used
+to store the image meta-data and file locations on the server.
 
