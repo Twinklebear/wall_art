@@ -194,8 +194,8 @@ void BackgroundBuilder::run(){
 		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
 
 	std::cout << "done making background\n";
-	std::cout << "Saving background to background.jpg\n";
-	background->save(QString::fromStdString("background.jpg"), "JPEG");
+	std::cout << "Saving background to background.png\n";
+	background->save(QString::fromStdString("background.png"), "PNG");
 	std::cout << "background saved\n";
 	emit finished(background);
 }
