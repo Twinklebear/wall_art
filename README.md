@@ -8,7 +8,7 @@ image and a blurred version of it and resizing them to fit the user's desktop di
 is used as a background and stretched a bit larger and cropped while the original image is scaled down
 and centered, letting the blurred copy provide a frame for it.
 
-The resulting wallpaper is something like this:
+The resulting wallpaper is something like this: (note that imgur compresses images, actual quality is much better)
 
 ![Landscape with Classical Ruins and Figures](http://i.imgur.com/TrxDEBB.jpg)
 
