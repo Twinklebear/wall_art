@@ -39,20 +39,20 @@ void resize_image(const QImage &img, QImage &out){
 			// Convert to linear space to do the filtering
 			int x = ix;
 			int y = iy;
-			float v00 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
+			const float v00 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			x = clamp(ix + 1, 0, img.width() - 1);
-			float v10 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
+			const float v10 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			x = ix;
 			y = clamp(iy + 1, 0, img.height() - 1);
-			float v01 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
+			const float v01 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			x = clamp(ix + 1, 0, img.width() - 1);
-			float v11 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
+			const float v11 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			// Now do the bilinear filtering
-			float v = v00 * (1.0 - fx) * (1.0 - fy) + v10 * fx * (1.0 - fy) + v01 * (1.0 - fx) * fy
+			const float v = v00 * (1.0 - fx) * (1.0 - fy) + v10 * fx * (1.0 - fy) + v01 * (1.0 - fx) * fy
 				+ v11 * fx * fy;
 
 			// Convert back to sRGB to save result
@@ -65,7 +65,6 @@ void resize_image(const QImage &img, QImage &out){
 void composite_background(const QImage &img, const QImage &back, QImage &out){
 	int offset_x = (back.width() - img.width()) / 2;
 	int offset_y = (back.height() - img.height()) / 2;
-	std::cout << "image will be placed starting at [" << offset_x << ", " << offset_y << "]\n";
 #pragma omp parallel for
 	for (int i = 0; i < back.width() * back.height(); ++i){
 		const int ox = i % back.width();
@@ -87,7 +86,6 @@ void composite_background(const QImage &img, const QImage &back, QImage &out){
 }
 
 void crop_image(const QImage &img, QImage &out, const int start_x, const int end_x, const int start_y, const int end_y){
-	std::cout << "cropping to " << out.width() << "x" << out.height() << "\n";
 	// Copy each scanline into its place
 #pragma omp parallel for
 	for (int y = 0; y < img.height(); ++y){
