@@ -125,12 +125,12 @@ def upload_image():
     </h1>Upload File</h1>
     <form action="" method=post enctype=multipart/form-data>
         <p>
-		   <label>Original Image
+           <label>Original Image
            <input type=file name=file>
-		   </label>
-		   <label>Blurred Image
+           </label>
+           <label>Blurred Image
            <input type=file name=blurred_file>
-		   </label>
+           </label>
            <label>Title
            <input type=text name=title>
            </label>
