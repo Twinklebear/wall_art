@@ -99,7 +99,7 @@ void WallArtApp::image_downloaded(ImageResult result){
 }
 void WallArtApp::background_built(QSharedPointer<QImage> background){
 	std::cout << "WallArt has recieved the background image, setting to background\n";
-	QString path = QDir::toNativeSeparators(QDir::currentPath() + "/background.png");
+	QString path = QDir::toNativeSeparators(QDir::tempPath() + "/background.png");
 	std::cout << "path = " << path.toStdString() << "\n";
 	std::wstring wstring = path.toStdWString();
 	if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, &wstring[0], SPIF_UPDATEINIFILE)){

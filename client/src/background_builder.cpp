@@ -1,9 +1,11 @@
 #include <cassert>
 #include <iostream>
 #include <chrono>
+
 #include <QRect>
 #include <QApplication>
 #include <QDesktopWidget>
+#include <QDir>
 
 #include "background_builder.h"
 
@@ -193,7 +195,9 @@ void BackgroundBuilder::run(){
 
 	std::cout << "done making background\n";
 	std::cout << "Saving background to background.png\n";
+	// Note: in the future we'll only save to the temp dir if we need to (on Windows we must pass a filename)
 	background->save(QString::fromStdString("background.png"), "PNG");
+	background->save(QDir::tempPath() + QString::fromStdString("/background.png"), "PNG");
 	std::cout << "background saved\n";
 	emit finished(background);
 }
