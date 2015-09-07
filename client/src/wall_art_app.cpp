@@ -26,10 +26,10 @@ void WallArtApp::fetch_url(const std::string &url){
 	network_manager.get(QNetworkRequest(QUrl(QString::fromStdString(url))));
 }
 void WallArtApp::build_background(const int image_id){
-	const std::string api_url = "http://localhost:5000/api";
+	const std::string api_url = "http://localhost:5000/api/image/";
 	// Launch image fetching tasks to get the original and blurred images
-	fetch_url(api_url + "/image/" + std::to_string(image_id));
-	fetch_url(api_url + "/blurred/" + std::to_string(image_id));
+	fetch_url(api_url + std::to_string(image_id) + "/original");
+	fetch_url(api_url + std::to_string(image_id) + "/blurred");
 }
 void WallArtApp::request_received(QNetworkReply *reply){
 	if (reply->error() == QNetworkReply::NoError){

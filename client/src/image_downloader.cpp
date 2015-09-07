@@ -10,7 +10,7 @@ ImageResult::ImageResult(int id, bool blurred, std::shared_ptr<QImage> image) : 
 ImageDownloader::ImageDownloader(QNetworkReply *reply) : reply(reply){}
 void ImageDownloader::run(){
 	const QString img_path = reply->url().path();
-	// The image api path is /api/(image|blurred)/<image_id>
+	// The image api path is /api/image/<image_id>/(original|blurred)
 	const auto path_segments = img_path.splitRef('/', QString::SkipEmptyParts);
 	bool parsed_id = false;
 	const int img_id = path_segments[2].toInt(&parsed_id);
@@ -18,7 +18,7 @@ void ImageDownloader::run(){
 		std::cout << "Invalid image API endpoint?\n";
 		return;
 	}
-	const bool blurred = path_segments[1] == "blurred";
+	const bool blurred = path_segments.back() == "blurred";
 
 	std::cout << "downloader fetching: " << reply->url().toString().toStdString() << "\n"
 		<< "path = " << img_path.toStdString() << "\n";

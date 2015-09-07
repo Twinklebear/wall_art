@@ -59,16 +59,27 @@ def get_images():
     images = build_image_dict(query_db("select * from images"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
 
-# API endpoint to get original image with some id
+# API endpoint to get information about image <id>
 @app.route("/api/image/<int:image_id>", methods=["GET"])
-def get_image(image_id):
+def get_image_info(image_id):
+    img = query_db("select * from images where id = ?", [image_id], one=True)
+    if img is None:
+        abort(404)
+    image_info = {"id": img[0], "title": img[1], "artist": img[2],
+            "work_type": img[3], "culture": img[4], "has_nudity": img[5],
+            "filename": img[6], "blurred_filename": img[7]}
+    return json.dumps(image_info, ensure_ascii=False).encode("utf8")
+
+# API endpoint to get the original image for image <id>
+@app.route("/api/image/<int:image_id>/original", methods=["GET"])
+def get_original_image(image_id):
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
     return send_file(img[6], mimetype="image/jpeg")
 
 # API endpoint to get blurred image with some id
-@app.route("/api/blurred/<int:image_id>", methods=["GET"])
+@app.route("/api/image/<int:image_id>/blurred", methods=["GET"])
 def get_blurred_image(image_id):
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
