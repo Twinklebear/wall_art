@@ -2,6 +2,8 @@
 #include <cstdint>
 #include <string>
 
+#include <windows.h>
+
 #include <QNetworkRequest>
 #include <QNetworkReply>
 #include <QUrl>
@@ -10,6 +12,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QThreadPool>
+#include <QDir>
 
 #include "background_builder.h"
 #include "image_downloader.h"
@@ -95,7 +98,13 @@ void WallArtApp::image_downloaded(ImageResult result){
 	}
 }
 void WallArtApp::background_built(QSharedPointer<QImage> background){
-	std::cout << "WallArt has recieved the background image\n";
+	std::cout << "WallArt has recieved the background image, setting to background\n";
+	QString path = QDir::toNativeSeparators(QDir::currentPath() + "/background.png");
+	std::cout << "path = " << path.toStdString() << "\n";
+	std::wstring wstring = path.toStdWString();
+	if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, &wstring[0], SPIF_UPDATEINIFILE)){
+		std::cout << "Error setting background\n";
+	}
 }
 
 #include "../include/moc_wall_art_app.cpp"
