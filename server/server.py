@@ -54,7 +54,7 @@ def build_image_dict(query_result):
     return images
 
 # API endpoint to get list of all images on server
-@app.route("/api/image/", methods=["GET"])
+@app.route("/api/image", methods=["GET"])
 def get_images():
     images = build_image_dict(query_db("select * from images"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
