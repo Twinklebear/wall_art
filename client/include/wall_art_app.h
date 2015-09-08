@@ -7,14 +7,23 @@
 #include <QApplication>
 #include <QSharedPointer>
 #include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QLabel>
+#include <QGridLayout>
+#include <QListWidget>
+#include <QPushButton>
 
 #include "image_downloader.h"
 
 class WallArtApp : public QApplication {
 	Q_OBJECT
 
+	QWidget window;
+	QGridLayout layout;
 	QLabel artist_name;
+	QListWidget painting_list;
+	QPushButton update_background;
+
 	QNetworkAccessManager network_manager;
 	// Should we have support for more than one running background generation job?
 	// I'll have the button gray out while we're doing the processing but could
@@ -33,6 +42,11 @@ public slots:
 	void request_received(QNetworkReply *reply);
 	void image_downloaded(ImageResult result);
 	void background_built(QSharedPointer<QImage> background);
+	void change_background();
+
+private:
+	// Handle a JSON API endpoint response and update UI with the resulting info
+	void handle_api(QNetworkReply *reply);
 };
 
 #endif

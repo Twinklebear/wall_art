@@ -5,7 +5,6 @@
 #include <windows.h>
 
 #include <QNetworkRequest>
-#include <QNetworkReply>
 #include <QUrl>
 #include <QJsonValue>
 #include <QJsonObject>
@@ -19,10 +18,18 @@
 #include "wall_art_app.h"
 
 WallArtApp::WallArtApp(int argc, char **argv)
-	: QApplication(argc, argv), artist_name("No artist loaded"), network_manager(this)
+	: QApplication(argc, argv), artist_name("No artist loaded"), update_background("Change Now"), network_manager(this)
 {
-	artist_name.show();
 	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(request_received(QNetworkReply*)));
+
+	connect(&update_background, SIGNAL(clicked(bool)), this, SLOT(change_background()));
+	layout.addWidget(&artist_name, 0, 0, Qt::AlignLeft | Qt::AlignTop);
+	layout.addWidget(&painting_list, 1, 0, Qt::AlignLeft | Qt::AlignVCenter);
+	layout.addWidget(&update_background, 0, 1, Qt::AlignRight | Qt::AlignTop);
+	window.setLayout(&layout);
+	window.show();
+	// Launch a request to get information about images on the server
+	fetch_url("http://localhost:5000/api/image");
 }
 void WallArtApp::fetch_url(const std::string &url){
 	std::cout << "Network request for " << url << " launching\n";
@@ -54,19 +61,7 @@ void WallArtApp::request_received(QNetworkReply *reply){
 				return;
 			}
 			else {
-				const QByteArray reply_text = reply->readAll();
-				const QJsonDocument json = QJsonDocument::fromJson(reply_text);
-				if (json.isArray()){
-					const QJsonArray json_array = json.array();
-					if (!json_array.empty()){
-						const QJsonObject json_obj = json_array.at(0).toObject();
-						auto artist_fnd = json_obj.constFind("artist");
-						if (artist_fnd != json_obj.end()){
-							artist_name.setText(artist_fnd->toString());
-						}
-					}
-				}
-				std::cout << "Reply: " << json.toJson().toStdString() << "\n";
+				handle_api(reply);
 			}
 		}
 		else {
@@ -104,6 +99,49 @@ void WallArtApp::background_built(QSharedPointer<QImage> background){
 	std::wstring wstring = path.toStdWString();
 	if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, &wstring[0], SPIF_UPDATEINIFILE)){
 		std::cout << "Error setting background\n";
+	}
+	update_background.setEnabled(true);
+}
+void WallArtApp::change_background(){
+	update_background.setEnabled(false);
+	std::cout << "changing now\n";
+	// Fetch artist info and the image
+	fetch_url("http://localhost:5000/api/image/7");
+	build_background(7);
+}
+void WallArtApp::handle_api(QNetworkReply *reply){
+	// If we're updating our local copy of the list of paintings, artists, etc. on the server
+	if (reply->url().path() == "/api/image") {
+		std::cout << "handling image data update response\n";
+		QStringList paintings;
+		const QByteArray reply_text = reply->readAll();
+		const QJsonDocument json = QJsonDocument::fromJson(reply_text);
+		if (json.isArray()){
+			const QJsonArray json_array = json.array();
+			if (!json_array.empty()){
+				for (const auto &val : json_array){
+					const QJsonObject json_obj = val.toObject();
+					auto title = json_obj.constFind("title");
+					if (title != json_obj.end()){
+						paintings.push_back(title->toString());
+					}
+				}
+			}
+		}
+		painting_list.clear();
+		painting_list.addItems(paintings);
+	}
+	// Handle case where we're querying info about a specific image
+	else if (reply->url().path().startsWith("/api/image/")){
+		const QByteArray reply_text = reply->readAll();
+		const QJsonDocument json = QJsonDocument::fromJson(reply_text);
+		if (json.isObject()){
+			const QJsonObject json_obj = json.object();
+			auto artist = json_obj.constFind("artist");
+			if (artist != json_obj.end()){
+				artist_name.setText(artist->toString());
+			}
+		}
 	}
 }
 
