@@ -127,9 +127,9 @@ void BackgroundBuilder::run(){
 		scaled_h = scaled_w * (1.0 / image_aspect);
 	}
 	//std::cout << "scaling image to " << scaled_w << "x" << scaled_h << "\n";
-	auto start = std::chrono::high_resolution_clock::now();
+	QImage scaled_background{ scaled_w, scaled_h, QImage::Format_RGB32 };
 
-	QImage scaled_background{scaled_w, scaled_h, QImage::Format_RGB32};
+	auto start = std::chrono::high_resolution_clock::now();
 	resize_image(*blurred, scaled_background);
 	auto end = std::chrono::high_resolution_clock::now();
 	//std::cout << "resize took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()

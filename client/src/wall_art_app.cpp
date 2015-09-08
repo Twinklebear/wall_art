@@ -105,14 +105,16 @@ void WallArtApp::background_built(QSharedPointer<QImage> background){
 	if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, &wstring[0], SPIF_UPDATEINIFILE)){
 		std::cout << "Error setting background\n";
 	}
+	// Re-start the timer and re-enable the button
 	update_background.setEnabled(true);
+	timer.start(20000);
 }
 void WallArtApp::change_background(){
-	// Re-start timer and disable button. Timer is reset so we don't immediately
+	// Stop timer and disable button. Timer is stopped so we don't immediately
 	// change again if the user clicked chang and the button is disabled so the user
 	// doesn't launch another change request while we're changing
 	// TODO: Maybe use a mutex or atomic bool or something?
-	timer.start(20000);
+	timer.stop();
 	update_background.setEnabled(false);
 	std::cout << "changing now\n";
 	std::uniform_int_distribution<size_t> distrib{0, images.size() - 1};
