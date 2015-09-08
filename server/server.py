@@ -48,7 +48,7 @@ def query_db(query, args=(), one=False):
 def build_image_dict(query_result):
     images = []
     for img in query_result:
-        images.append({"id": img[0], "title": img[1], "artist": img[2],
+        images.append({"id": img[0], "title": img[1], "artists": [img[2]],
             "work_type": img[3], "culture": img[4], "has_nudity": img[5],
             "filename": img[6], "blurred_filename": img[7]})
     return images
@@ -65,7 +65,7 @@ def get_image_info(image_id):
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
-    image_info = {"id": img[0], "title": img[1], "artist": img[2],
+    image_info = {"id": img[0], "title": img[1], "artists": [img[2]],
             "work_type": img[3], "culture": img[4], "has_nudity": img[5],
             "filename": img[6], "blurred_filename": img[7]}
     return json.dumps(image_info, ensure_ascii=False).encode("utf8")
@@ -85,14 +85,6 @@ def get_blurred_image(image_id):
     if img is None:
         abort(404)
     return send_file(img[7], mimetype="image/jpeg")
-
-@app.route("/api/artist/<artist_name>")
-def get_artist_paintings(artist_name):
-    artist = query_db("select * from images where artist = ?", [artist_name])
-    if artist is None:
-        abort(404)
-    images = build_image_dict(artist)
-    return json.dumps(images, ensure_ascii=False).encode("utf8")
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_image():
