@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <string>
+#include <vector>
+#include <random>
 
 #include <QApplication>
 #include <QSharedPointer>
@@ -12,7 +14,9 @@
 #include <QGridLayout>
 #include <QListWidget>
 #include <QPushButton>
+#include <QTimer>
 
+#include "image_data.h"
 #include "image_downloader.h"
 
 class WallArtApp : public QApplication {
@@ -25,11 +29,15 @@ class WallArtApp : public QApplication {
 	QPushButton update_background;
 
 	QNetworkAccessManager network_manager;
+	// Timer to alert us when to change the background
+	QTimer timer;
 	// Should we have support for more than one running background generation job?
 	// I'll have the button gray out while we're doing the processing but could
 	// we get multiple click events? I guess we could keep a bool and to track
 	// if we're processing a background switch
 	std::shared_ptr<QImage> original, blurred;
+	std::vector<ImageData> images;
+	std::mt19937_64 rng;
 
 public:
 	WallArtApp(int argc, char **argv);

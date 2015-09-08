@@ -18,9 +18,14 @@
 #include "wall_art_app.h"
 
 WallArtApp::WallArtApp(int argc, char **argv)
-	: QApplication(argc, argv), artist_name("No artist loaded"), update_background("Change Now"), network_manager(this)
+	: QApplication(argc, argv), artist_name("No artist loaded"), update_background("Change Now"),
+	network_manager(this), timer(this), rng(std::random_device()())
 {
 	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(request_received(QNetworkReply*)));
+	connect(&timer, SIGNAL(timeout()), this, SLOT(change_background()));
+	// Update every 10s
+	// TODO: Change to actual interval that isn't insanely short
+	timer.start(20000);
 
 	connect(&update_background, SIGNAL(clicked(bool)), this, SLOT(change_background()));
 	layout.addWidget(&artist_name, 0, 0, Qt::AlignLeft | Qt::AlignTop);
@@ -103,16 +108,25 @@ void WallArtApp::background_built(QSharedPointer<QImage> background){
 	update_background.setEnabled(true);
 }
 void WallArtApp::change_background(){
+	// Re-start timer and disable button. Timer is reset so we don't immediately
+	// change again if the user clicked chang and the button is disabled so the user
+	// doesn't launch another change request while we're changing
+	// TODO: Maybe use a mutex or atomic bool or something?
+	timer.start(20000);
 	update_background.setEnabled(false);
 	std::cout << "changing now\n";
+	std::uniform_int_distribution<size_t> distrib{0, images.size() - 1};
+	const auto &img = images[distrib(rng)];
+	std::cout << "Selected " << img.title.toStdString() << "\n";
 	// Fetch artist info and the image
-	fetch_url("http://localhost:5000/api/image/7");
-	build_background(7);
+	fetch_url("http://localhost:5000/api/image/" + std::to_string(img.id));
+	build_background(img.id);
 }
 void WallArtApp::handle_api(QNetworkReply *reply){
 	// If we're updating our local copy of the list of paintings, artists, etc. on the server
 	if (reply->url().path() == "/api/image") {
 		std::cout << "handling image data update response\n";
+		images.clear();
 		QStringList paintings;
 		const QByteArray reply_text = reply->readAll();
 		const QJsonDocument json = QJsonDocument::fromJson(reply_text);
@@ -121,10 +135,8 @@ void WallArtApp::handle_api(QNetworkReply *reply){
 			if (!json_array.empty()){
 				for (const auto &val : json_array){
 					const QJsonObject json_obj = val.toObject();
-					auto title = json_obj.constFind("title");
-					if (title != json_obj.end()){
-						paintings.push_back(title->toString());
-					}
+					images.emplace_back(json_obj);
+					paintings.push_back(images.back().title);
 				}
 			}
 		}
@@ -137,10 +149,9 @@ void WallArtApp::handle_api(QNetworkReply *reply){
 		const QJsonDocument json = QJsonDocument::fromJson(reply_text);
 		if (json.isObject()){
 			const QJsonObject json_obj = json.object();
-			auto artist = json_obj.constFind("artist");
-			if (artist != json_obj.end()){
-				artist_name.setText(artist->toString());
-			}
+			const ImageData img{json_obj};
+			// TODO: Proper display of lists of artists
+			artist_name.setText(img.artists[0]);
 		}
 	}
 }
