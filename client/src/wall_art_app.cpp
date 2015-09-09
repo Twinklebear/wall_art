@@ -23,7 +23,7 @@ WallArtApp::WallArtApp(int argc, char **argv)
 {
 	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(request_received(QNetworkReply*)));
 	connect(&timer, SIGNAL(timeout()), this, SLOT(change_background()));
-	// Update every 10s
+	// Update every few seconds
 	// TODO: Change to actual interval that isn't insanely short
 	timer.start(20000);
 

@@ -32,13 +32,13 @@ void resize_image(const QImage &img, QImage &out){
 		int iy = static_cast<int>(fy);
 		fx = fx - ix;
 		fy = fy - iy;
-		const uint8_t *img_scanline = img.scanLine(iy);
 		uint8_t *out_scanline = out.scanLine(oy);
 		// This is just nearest neighbor filtering with sRGB correction
 		for (int c = 0; c < 4; ++c){
 			// Convert to linear space to do the filtering
 			int x = ix;
 			int y = iy;
+			const uint8_t *img_scanline = img.scanLine(y);
 			const float v00 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			x = clamp(ix + 1, 0, img.width() - 1);
@@ -46,6 +46,7 @@ void resize_image(const QImage &img, QImage &out){
 
 			x = ix;
 			y = clamp(iy + 1, 0, img.height() - 1);
+			img_scanline = img.scanLine(y);
 			const float v01 = srgb_to_linear(static_cast<float>(img_scanline[x * 4 + c]) / 255.0);
 
 			x = clamp(ix + 1, 0, img.width() - 1);
