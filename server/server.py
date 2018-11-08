@@ -1,15 +1,9 @@
 #!/usr/bin/python
 
-#from PIL import Image, ImageFilter
-
-#with Image.open("forum.jpg") as img:
-#    print(img.size)
-#    blurred = img.filter(ImageFilter.GaussianBlur(96))
-#    blurred.save("blurred.jpg", "JPEG")
-
 import sqlite3
 import os
-from flask import Flask, json, send_file, g, request, redirect, abort
+import datetime
+from flask import Flask, json, send_file, g, request, redirect, abort, url_for
 from werkzeug.utils import secure_filename
 
 DATABASE = "database.db"
@@ -22,13 +16,10 @@ app.config.from_object(__name__)
 def index():
     return "Wall Art"
 
-def connect_db():
-    return sqlite3.connect(app.config["DATABASE"])
-
 def get_db():
     db = getattr(g, "_database", None)
     if db is None:
-        db = g._database = connect_db()
+        db = g._database = sqlite3.connect(app.config["DATABASE"])
     return db
 
 @app.teardown_appcontext
@@ -37,26 +28,25 @@ def close_db(exception):
     if db is not None:
         db.close()
 
-def query_db(query, args=(), one=False):
+def query_db(query, args=()):
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
     cur.close()
-    return (rv[0] if rv else None) if one else rv
+    return rv
 
 # Build a list of all images as an array of dicts, with one dict per image
 # to be easily returned as a JSON string
 def build_image_dict(query_result):
     images = []
     for img in query_result:
-        images.append({"id": img[0], "title": img[1], "artists": [img[2]],
-            "work_type": img[3], "culture": img[4], "has_nudity": img[5],
-            "filename": img[6], "blurred_filename": img[7]})
+        images.append({"id": img[0], "title": img[1], "artist": img[2],
+            "work_type": img[3], "has_nudity": img[4], "filename": img[5]})
     return images
 
 # API endpoint to get list of all images on server
 @app.route("/api/image", methods=["GET"])
 def get_images():
-    images = build_image_dict(query_db("select * from images"))
+    images = build_image_dict(query_db("select * from images;"))
     return json.dumps(images, ensure_ascii=False).encode("utf8")
 
 # API endpoint to get information about image <id>
@@ -65,9 +55,9 @@ def get_image_info(image_id):
     img = query_db("select * from images where id = ?", [image_id], one=True)
     if img is None:
         abort(404)
-    image_info = {"id": img[0], "title": img[1], "artists": [img[2]],
-            "work_type": img[3], "culture": img[4], "has_nudity": img[5],
-            "filename": img[6], "blurred_filename": img[7]}
+
+    image_info = {"id": img[0], "title": img[1], "artist": img[2],
+            "work_type": img[3], "has_nudity": img[4], "filename": img[5]}
     return json.dumps(image_info, ensure_ascii=False).encode("utf8")
 
 # API endpoint to get the original image for image <id>
@@ -78,66 +68,73 @@ def get_original_image(image_id):
         abort(404)
     return send_file(img[6], mimetype="image/jpeg")
 
-# API endpoint to get blurred image with some id
-@app.route("/api/image/<int:image_id>/blurred", methods=["GET"])
-def get_blurred_image(image_id):
-    img = query_db("select * from images where id = ?", [image_id], one=True)
-    if img is None:
-        abort(404)
-    return send_file(img[7], mimetype="image/jpeg")
-
 @app.route("/upload", methods=["GET", "POST"])
 def upload_image():
     if request.method == "POST":
         f = request.files["file"]
-        bf = request.files["blurred_file"]
-        if f and bf:
-            filename = os.path.join(app.config["UPLOAD_FOLDER"],
-                    secure_filename(f.filename))
-            blurred_filename = os.path.join(app.config["UPLOAD_FOLDER"],
-					secure_filename(bf.filename))
-            f.save(filename)
-            bf.save(blurred_filename)
-            if query_db("select * from images where title = ?",
-                    [request.form["title"]], one=True) is None:
+        if f:
+            if not query_db("select * from images where title = ? and artist = ?",
+                    [request.form["title"], request.form["artist"]]):
+
+                filename = os.path.join(app.config["UPLOAD_FOLDER"],
+                        datetime.datetime.now().strftime("%Y%m%dT%H%M%SZ") + ".jpg")
+                f.save(filename)
                 db = get_db()
-                # TODO: We should actually have a check box for has nudity and
-                # also accept a second file upload for the blurred file
-                db.execute("""insert into images (title, artist, work_type,
-                    culture, has_nudity, filename, blurred_filename)
-                    values (?, ?, ?, ?, ?, ?, ?)""", [request.form["title"],
-                        request.form["artist"], request.form["work_type"],
-                        request.form["culture"], False, filename, blurred_filename])
+                db.execute("insert into images (title, artist, work_type, has_nudity, filename) values (?, ?, ?, ?, ?)",
+                        [request.form["title"], request.form["artist"], request.form["work_type"],
+                            request.form.get("hasnudity", False), filename])
                 db.commit()
-        return redirect("/upload")
+        return redirect(url_for("upload_image"))
 
     return """
-    <!DOCTYPE html5>
-    <title>Upload image</title>
-    </h1>Upload File</h1>
-    <form action="" method=post enctype=multipart/form-data>
-        <p>
-           <label>Original Image
-           <input type=file name=file>
-           </label>
-           <label>Blurred Image
-           <input type=file name=blurred_file>
-           </label>
-           <label>Title
-           <input type=text name=title>
-           </label>
-           <label>Artist
-           <input type=text name=artist>
-           </label>
-           <label>Work Type
-           <input type=text name=work_type>
-           </label>
-           <label>Culture
-           <input type=text name=culture>
-           </label>
-           <input type=submit value=Upload>
-        </p>
-    </form>
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+        <!-- Bootstrap CSS -->
+        <link rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
+            integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+        <title>Upload</title>
+      </head>
+      <body>
+
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <h1>Upload File</h1>
+                    <form method="post" enctype="multipart/form-data">
+                    <div class="form-group">
+                        <label for="imgFile">Image File</label>
+                        <input type="file" class="form-control" id="imgFile" name="file"
+                            placeholder="Upload an image">
+                    </div>
+                    <div class="form-group">
+                        <label for="imgTitle">Title</label>
+                        <input type="text" class="form-control" id="imgTitle" name="title">
+                    </div>
+                    <div class="form-group">
+                        <label for="artistName">Artist</label>
+                        <input type="text" class="form-control" id="artistNmae" name="artist">
+                    </div>
+                    <div class="form-group">
+                        <label for="workType">Work Type</label>
+                        <input type="text" class="form-control" id="workType" name="work_type">
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="containsNudity" name="hasnudity">
+                        <label class="form-check-label" for="containsNudity">Contains Nudity</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Upload</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+      </body>
+    </html>
     """
 
 if __name__ == "__main__":

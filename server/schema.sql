@@ -4,9 +4,7 @@ create table images (
     title text not null,
     artist text not null,
     work_type text not null,
-    culture text not null,
     has_nudity boolean not null,
-    filename text not null,
-    blurred_filename text not null
+    filename text not null
 );
 
