@@ -8,8 +8,7 @@
 // ImageData stores information about an image on the server, such as its
 // id, artists, title, etc.
 struct ImageData {
-	QStringList artists;
-	QString culture, title, work_type;
+	QString artist, title, work_type;
 	bool has_nudity;
 	int id;
 

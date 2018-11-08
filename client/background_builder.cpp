@@ -22,7 +22,7 @@ float linear_to_srgb(float v){
 void resize_image(const QImage &img, QImage &out){
 	assert(img.format() == QImage::Format_RGB32);
 	assert(out.format() == QImage::Format_RGB32);
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < out.width() * out.height(); ++i){
 		int ox = i % out.width();
 		int oy = i / out.width();
@@ -69,7 +69,7 @@ void composite_background(const QImage &img, const QImage &back, QImage &out){
 	assert(back.format() == QImage::Format_RGB32);
 	int offset_x = (back.width() - img.width()) / 2;
 	int offset_y = (back.height() - img.height()) / 2;
-#pragma omp parallel for
+//#pragma omp parallel for
 	for (int i = 0; i < back.width() * back.height(); ++i){
 		const int ox = i % back.width();
 		const int oy = i / back.width();
@@ -88,23 +88,24 @@ void composite_background(const QImage &img, const QImage &back, QImage &out){
 		}
 	}
 }
-void crop_image(const QImage &img, QImage &out, const int start_x, const int end_x, const int start_y, const int end_y){
+void crop_image(const QImage &img, QImage &out,
+		const int start_x, const int end_x,
+		const int start_y, const int end_y)
+{
 	assert(img.format() == QImage::Format_RGB32);
 	assert(out.format() == QImage::Format_RGB32);
 	// Copy each scanline into its place
-#pragma omp parallel for
-	for (int y = 0; y < img.height(); ++y){
-		if (y >= start_y && y < end_y){
-			const uint8_t *src = img.scanLine(y) + start_x * 4;
-			uint8_t *dst = out.scanLine(y - start_y);
-			const int count = (end_x - start_x) * 4;
-			std::memcpy(dst, src, count);
-		}
+//#pragma omp parallel for
+	for (int y = start_y; y < end_y; ++y){
+		const uint8_t *src = img.scanLine(y) + start_x * 4;
+		uint8_t *dst = out.scanLine(y - start_y);
+		const int count = (end_x - start_x) * 4;
+		std::memcpy(dst, src, count);
 	}
 }
 
-BackgroundBuilder::BackgroundBuilder(std::shared_ptr<QImage> original, std::shared_ptr<QImage> blurred)
-	: original(original), blurred(blurred)
+BackgroundBuilder::BackgroundBuilder(std::shared_ptr<QImage> original)
+	: original(original)
 {}
 void BackgroundBuilder::run(){
 	const QRect win_dim = QApplication::desktop()->screenGeometry();
@@ -115,94 +116,41 @@ void BackgroundBuilder::run(){
 	std::cout << "Desktop aspect = " << desktop_aspect << ", image = " << image_aspect << "\n";
 
 	auto pipeline_start = std::chrono::high_resolution_clock::now();
+
+	// TODO: We want to crop the image so it matches the desktop's aspect ratio
 	// If the image is has a higher aspect ratio than the desktop we'll want to scale y
 	// to fit and let x be croppped, otherwise we do the opposite
-	int scaled_w = 0;
-	int scaled_h = 0;
+	int cropped_w = original->width();
+	int cropped_h = original->height();
 	if (desktop_aspect < image_aspect){
-		scaled_h = win_dim.height() + 32;
-		scaled_w = scaled_h * image_aspect;
+		cropped_w = cropped_h * desktop_aspect;
+	} else {
+		cropped_h = cropped_w * (1.0 / desktop_aspect);
 	}
-	else {
-		scaled_w = win_dim.width() + 32;
-		scaled_h = scaled_w * (1.0 / image_aspect);
-	}
-	//std::cout << "scaling image to " << scaled_w << "x" << scaled_h << "\n";
-	QImage scaled_background{ scaled_w, scaled_h, QImage::Format_RGB32 };
 
+	std::cout << "Original dimensions: [" << original->width()
+		<< ", " << original->height() << "]\n";
+	std::cout << "Cropped dimensions: [" << cropped_w << ", " << cropped_h << "]\n";
+	const int start_x = (original->width() - cropped_w) / 2;
+	const int end_x = cropped_w + start_x;
+	const int start_y = (original->height() - cropped_h) / 2;
+	const int end_y = cropped_h + start_y;
+	std::cout << "Crop start: [" << start_x << ", " << start_y
+		<< "] end: [" << end_x << ", " << end_y << "]\n";
+
+	QSharedPointer<QImage> background(new QImage(cropped_w, cropped_h, QImage::Format_RGB32));
 	auto start = std::chrono::high_resolution_clock::now();
-	resize_image(*blurred, scaled_background);
+	crop_image(*original, *background, start_x, end_x, start_y, end_y);
 	auto end = std::chrono::high_resolution_clock::now();
-	//std::cout << "resize took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-	//	<< "ms\n";
+	std::cout << "crop took "
+		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+		<< "ms\n";
 
-	//scaled_background.save(QString("scaled_background.jpg"), "JPEG");
-
-	int crop_x = (scaled_w - win_dim.width()) / 2;
-	int start_x = crop_x;
-	int end_x = scaled_w - crop_x;
-	// Sometimes our crop may be off by a few pixels, so just drop the extra ones if we don't match
-	if (end_x - start_x != win_dim.width()){
-		//std::cout << "width mismatch of " << end_x - start_x - win_dim.width() << "pixels\n";
-		end_x -= end_x - start_x - win_dim.width();
-	}
-
-	int crop_y = (scaled_h - win_dim.height()) / 2;
-	int start_y = crop_y;
-	int end_y = scaled_h - crop_y;
-	if (end_y - start_y != win_dim.height()){
-		//std::cout << "height mismatch of " << end_y - start_y - win_dim.height() << "pixels\n";
-		end_y -= end_y - start_y - win_dim.height();
-	}
-
-	QSharedPointer<QImage> background(new QImage{win_dim.width(), win_dim.height(), QImage::Format_RGB32});
-	start = std::chrono::high_resolution_clock::now();
-	crop_image(scaled_background, *background, start_x, end_x, start_y, end_y);
-	end = std::chrono::high_resolution_clock::now();
-	//std::cout << "crop took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-	//	<< "ms\n";
-
-	//background->save(QString("cropped_background.jpg"), "JPEG");
-
-	//std::cout << "compositing original image with blurred background\n";
-
-	int centered_w = 0;
-	int centered_h = 0;
-	float border_percent = 0.04f;
-	if (desktop_aspect > image_aspect) {
-		centered_h = win_dim.height() - border_percent * win_dim.height();
-		centered_w = centered_h * image_aspect;
-		//std::cout << "border size of " << border_percent * win_dim.height() << " along x\n";
-	}
-	else {
-		centered_w = win_dim.width() - border_percent * win_dim.width();
-		centered_h = centered_w * (1.0 / image_aspect);
-		//std::cout << "border size of " << border_percent * win_dim.width() << " along y\n";
-	}
-	//std::cout << "Centered image will be scaled to " << centered_w << "x" << centered_h << "\n";
-	QImage centered_image{centered_w, centered_h,  QImage::Format_RGB32};
-
-	start = std::chrono::high_resolution_clock::now();
-	resize_image(*original, centered_image);
-	end = std::chrono::high_resolution_clock::now();
-	//std::cout << "scaling centered image took "
-	//	<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
-	//centered_image.save(QString("centered_image.jpg"), "JPEG");
-
-	start = std::chrono::high_resolution_clock::now();
-	composite_background(centered_image, *background, *background);
-	end = std::chrono::high_resolution_clock::now();
-	//std::cout << "compositing took "
-	//	<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms\n";
-
-	auto pipeline_end = std::chrono::high_resolution_clock::now();
-	std::cout << "Entire pipeline to build background took "
-		<< std::chrono::duration_cast<std::chrono::milliseconds>(pipeline_end - pipeline_start).count() << "ms\n";
+	background->save(QString("cropped_background.jpg"), "JPEG");
 
 	std::cout << "done making background, Saving background to background.png\n";
-	// Note: in the future we'll only save to the temp dir if we need to (on Windows we must pass a filename)
-	background->save(QString::fromStdString("background.png"), "PNG");
-	background->save(QDir::tempPath() + QString::fromStdString("/background.png"), "PNG");
+	background->save(QString::fromStdString("background.jpg"), "JPEG", 80);
+	background->save(QDir::tempPath() + QString::fromStdString("/background.jpg"), "JPEG", 80);
 	std::cout << "background saved\n";
 	emit finished(background);
 }

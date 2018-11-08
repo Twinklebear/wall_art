@@ -24,7 +24,7 @@ WallArtApp::WallArtApp(int argc, char **argv)
 	connect(&timer, SIGNAL(timeout()), this, SLOT(change_background()));
 	// Update every few seconds
 	// TODO: Change to actual interval that isn't insanely short
-	timer.start(20000);
+	//timer.start(20000);
 
 	connect(&update_background, SIGNAL(clicked(bool)), this, SLOT(change_background()));
 	layout.addWidget(&artist_name, 0, 0, Qt::AlignLeft | Qt::AlignTop);
@@ -41,9 +41,8 @@ void WallArtApp::fetch_url(const std::string &url){
 }
 void WallArtApp::build_background(const int image_id){
 	const std::string api_url = "http://localhost:5000/api/image/";
-	// Launch image fetching tasks to get the original and blurred images
+	// Launch image fetching tasks to get the original images
 	fetch_url(api_url + std::to_string(image_id) + "/original");
-	fetch_url(api_url + std::to_string(image_id) + "/blurred");
 }
 void WallArtApp::request_received(QNetworkReply *reply){
 	if (reply->error() == QNetworkReply::NoError){
@@ -79,33 +78,28 @@ void WallArtApp::request_received(QNetworkReply *reply){
 }
 void WallArtApp::image_downloaded(ImageResult result){
 	std::cout << "Image with id " << result.id << " was fetched\n";
-	if (!result.blurred){
-		original = result.image;
-	}
-	else {
-		blurred = result.image;
-	}
+	original = result.image;
 	std::cout << "format = " << result.image->format() << "\n";
 	// If we have both images we can now build the background
-	if (original && blurred){
+	if (original){
 		std::cout << "I have downloaded both images, will now build background\n";
-		BackgroundBuilder *builder = new BackgroundBuilder(original, blurred);
-		connect(builder, SIGNAL(finished(QSharedPointer<QImage>)), this, SLOT(background_built(QSharedPointer<QImage>)));
+		BackgroundBuilder *builder = new BackgroundBuilder(original);
+		connect(builder, SIGNAL(finished(QSharedPointer<QImage>)),
+				this, SLOT(background_built(QSharedPointer<QImage>)));
 		QThreadPool::globalInstance()->start(builder);
 		original = nullptr;
-		blurred = nullptr;
 	}
 }
 void WallArtApp::background_built(QSharedPointer<QImage> background){
 	std::cout << "WallArt has recieved the background image, setting to background\n";
-	QString path = QDir::toNativeSeparators(QDir::tempPath() + "/background.png");
+	QString path = QDir::toNativeSeparators(QDir::tempPath() + "/background.jpg");
 	std::cout << "path = " << path.toStdString() << "\n";
 	if (!set_background(path)){
 		std::cout << "Error setting background\n";
 	}
 	// Re-start the timer and re-enable the button
 	update_background.setEnabled(true);
-	timer.start(20000);
+	//timer.start(20000);
 }
 void WallArtApp::change_background(){
 	// Stop timer and disable button. Timer is stopped so we don't immediately
@@ -151,7 +145,7 @@ void WallArtApp::handle_api(QNetworkReply *reply){
 			const QJsonObject json_obj = json.object();
 			const ImageData img{json_obj};
 			// TODO: Proper display of lists of artists
-			artist_name.setText(img.artists[0]);
+			artist_name.setText(img.artist);
 		}
 	}
 }

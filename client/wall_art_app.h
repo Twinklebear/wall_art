@@ -35,15 +35,14 @@ class WallArtApp : public QApplication {
 	// I'll have the button gray out while we're doing the processing but could
 	// we get multiple click events? I guess we could keep a bool and to track
 	// if we're processing a background switch
-	std::shared_ptr<QImage> original, blurred;
+	std::shared_ptr<QImage> original;
 	std::vector<ImageData> images;
 	std::mt19937_64 rng;
 
 public:
 	WallArtApp(int argc, char **argv);
 	void fetch_url(const std::string &url);
-	// Fetch the original and blurred images with the id and composite them
-	// to create the background
+	// Fetch the image with the id and crop it to create the wallpaper
 	void build_background(const int image_id);
 
 public slots:

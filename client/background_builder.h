@@ -7,16 +7,15 @@
 #include <QRunnable>
 #include <QImage>
 
-// The background builder takes two images and composes them into
-// the wallpaper we're generating. The background is the blurred image
-// and the original image will be placed centered on top of it
+// The background builder takes the original image and crops
+// it to fit nicely on the user's screen
 class BackgroundBuilder : public QObject, public QRunnable {
 	Q_OBJECT
 
-	std::shared_ptr<QImage> original, blurred;
+	std::shared_ptr<QImage> original;
 
 public:
-	BackgroundBuilder(std::shared_ptr<QImage> original, std::shared_ptr<QImage> blurred);
+	BackgroundBuilder(std::shared_ptr<QImage> original);
 	void run() override;
 
 signals:
