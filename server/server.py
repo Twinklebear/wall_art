@@ -3,8 +3,10 @@
 import sqlite3
 import os
 import datetime
-from flask import Flask, json, send_file, g, request, redirect, abort, url_for
+from flask import Flask, json, send_file, g, request, \
+        redirect, abort, url_for, render_template
 from werkzeug.utils import secure_filename
+from PIL import Image
 
 DATABASE = "database.db"
 UPLOAD_FOLDER = "./images/"
@@ -52,9 +54,10 @@ def get_images():
 # API endpoint to get information about image <id>
 @app.route("/api/image/<int:image_id>", methods=["GET"])
 def get_image_info(image_id):
-    img = query_db("select * from images where id = ?", [image_id], one=True)
+    img = query_db("select * from images where id = ?", [image_id])
     if img is None:
         abort(404)
+    img = img[0]
 
     image_info = {"id": img[0], "title": img[1], "artist": img[2],
             "work_type": img[3], "has_nudity": img[4], "filename": img[5]}
@@ -63,79 +66,34 @@ def get_image_info(image_id):
 # API endpoint to get the original image for image <id>
 @app.route("/api/image/<int:image_id>/original", methods=["GET"])
 def get_original_image(image_id):
-    img = query_db("select * from images where id = ?", [image_id], one=True)
+    img = query_db("select * from images where id = ?", [image_id])
     if img is None:
         abort(404)
-    return send_file(img[6], mimetype="image/jpeg")
+    return send_file(img[0][5], mimetype="image/jpeg")
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload_image():
     if request.method == "POST":
-        f = request.files["file"]
-        if f:
+        try:
+            f = Image.open(request.files["file"])
             if not query_db("select * from images where title = ? and artist = ?",
                     [request.form["title"], request.form["artist"]]):
 
+                # Use pillow to save as quality 80 JPEG, maybe resize images that
+                # are extremely large?
+                f = Image.open(f)
                 filename = os.path.join(app.config["UPLOAD_FOLDER"],
                         datetime.datetime.now().strftime("%Y%m%dT%H%M%SZ") + ".jpg")
-                f.save(filename)
+                f.save(filename, "jpeg", quality=80)
                 db = get_db()
                 db.execute("insert into images (title, artist, work_type, has_nudity, filename) values (?, ?, ?, ?, ?)",
                         [request.form["title"], request.form["artist"], request.form["work_type"],
                             request.form.get("hasnudity", False), filename])
                 db.commit()
-        return redirect(url_for("upload_image"))
-
-    return """
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <!-- Required meta tags -->
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-        <!-- Bootstrap CSS -->
-        <link rel="stylesheet"
-            href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css"
-            integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-        <title>Upload</title>
-      </head>
-      <body>
-
-        <div class="container">
-            <div class="row">
-                <div class="col-12">
-                    <h1>Upload File</h1>
-                    <form method="post" enctype="multipart/form-data">
-                    <div class="form-group">
-                        <label for="imgFile">Image File</label>
-                        <input type="file" class="form-control" id="imgFile" name="file"
-                            placeholder="Upload an image">
-                    </div>
-                    <div class="form-group">
-                        <label for="imgTitle">Title</label>
-                        <input type="text" class="form-control" id="imgTitle" name="title">
-                    </div>
-                    <div class="form-group">
-                        <label for="artistName">Artist</label>
-                        <input type="text" class="form-control" id="artistNmae" name="artist">
-                    </div>
-                    <div class="form-group">
-                        <label for="workType">Work Type</label>
-                        <input type="text" class="form-control" id="workType" name="work_type">
-                    </div>
-                    <div class="form-check">
-                        <input type="checkbox" class="form-check-input" id="containsNudity" name="hasnudity">
-                        <label class="form-check-label" for="containsNudity">Contains Nudity</label>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Upload</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-      </body>
-    </html>
-    """
+            return redirect(url_for("upload_image"))
+        except:
+            return "Bad image file"
+    return render_template("upload_page.html")
 
 if __name__ == "__main__":
     app.run(debug=True)
