@@ -22,7 +22,7 @@ signals:
 	void finished(QSharedPointer<QImage> background);
 };
 
-Q_DECLARE_METATYPE(QSharedPointer<QImage>);
+Q_DECLARE_METATYPE(QSharedPointer<QImage>)
 
 #endif
 

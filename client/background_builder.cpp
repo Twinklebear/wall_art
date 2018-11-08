@@ -1,4 +1,6 @@
 #include <cassert>
+#include <cmath>
+#include <cstring>
 #include <iostream>
 #include <chrono>
 
