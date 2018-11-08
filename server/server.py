@@ -79,9 +79,7 @@ def upload_image():
             if not query_db("select * from images where title = ? and artist = ?",
                     [request.form["title"], request.form["artist"]]):
 
-                # Use pillow to save as quality 80 JPEG, maybe resize images that
-                # are extremely large?
-                f = Image.open(f)
+                # Use pillow to save as quality 80 JPEG
                 filename = os.path.join(app.config["UPLOAD_FOLDER"],
                         datetime.datetime.now().strftime("%Y%m%dT%H%M%SZ") + ".jpg")
                 f.save(filename, "jpeg", quality=80)
@@ -91,7 +89,8 @@ def upload_image():
                             request.form.get("hasnudity", False), filename])
                 db.commit()
             return redirect(url_for("upload_image"))
-        except:
+        except Exception as e:
+            print(e)
             return "Bad image file"
     return render_template("upload_page.html")
 
