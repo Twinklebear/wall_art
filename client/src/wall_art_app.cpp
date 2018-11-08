@@ -2,8 +2,6 @@
 #include <cstdint>
 #include <string>
 
-#include <windows.h>
-
 #include <QNetworkRequest>
 #include <QUrl>
 #include <QJsonValue>
@@ -15,6 +13,7 @@
 
 #include "background_builder.h"
 #include "image_downloader.h"
+#include "set_background.h"
 #include "wall_art_app.h"
 
 WallArtApp::WallArtApp(int argc, char **argv)
@@ -23,7 +22,7 @@ WallArtApp::WallArtApp(int argc, char **argv)
 {
 	connect(&network_manager, SIGNAL(finished(QNetworkReply*)), this, SLOT(request_received(QNetworkReply*)));
 	connect(&timer, SIGNAL(timeout()), this, SLOT(change_background()));
-	// Update every 10s
+	// Update every few seconds
 	// TODO: Change to actual interval that isn't insanely short
 	timer.start(20000);
 
@@ -101,8 +100,7 @@ void WallArtApp::background_built(QSharedPointer<QImage> background){
 	std::cout << "WallArt has recieved the background image, setting to background\n";
 	QString path = QDir::toNativeSeparators(QDir::tempPath() + "/background.png");
 	std::cout << "path = " << path.toStdString() << "\n";
-	std::wstring wstring = path.toStdWString();
-	if (!SystemParametersInfoW(SPI_SETDESKWALLPAPER, 0, &wstring[0], SPIF_UPDATEINIFILE)){
+	if (!set_background(path)){
 		std::cout << "Error setting background\n";
 	}
 	// Re-start the timer and re-enable the button
