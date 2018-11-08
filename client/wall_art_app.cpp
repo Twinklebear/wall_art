@@ -156,5 +156,5 @@ void WallArtApp::handle_api(QNetworkReply *reply){
 	}
 }
 
-#include "../include/moc_wall_art_app.cpp"
+#include "moc_wall_art_app.cpp"
 

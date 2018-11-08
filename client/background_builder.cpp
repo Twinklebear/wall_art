@@ -207,5 +207,5 @@ void BackgroundBuilder::run(){
 	emit finished(background);
 }
 
-#include "../include/moc_background_builder.cpp"
+#include "moc_background_builder.cpp"
 

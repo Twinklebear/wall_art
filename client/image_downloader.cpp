@@ -37,5 +37,5 @@ void ImageDownloader::run(){
 	emit finished(ImageResult{img_id, blurred, img});
 }
 
-#include "../include/moc_image_downloader.cpp"
+#include "moc_image_downloader.cpp"
 

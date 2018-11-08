@@ -20,14 +20,19 @@ if (OPENMP_FOUND)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
 endif()
 
-set(WALL_ART_INSTALL_DIR "${WALL_ART_SOURCE_DIR}/bin")
-
 # Hack to find Qt on windows
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt5Widgets)
 find_package(Qt5Network)
 
-include_directories(include)
-add_subdirectory(src)
+set(SOURCE_FILES main.cpp wall_art_app.cpp image_downloader.cpp background_builder.cpp image_data.cpp)
+if (WIN32)
+	set(SOURCE_FILES ${SOURCE_FILES} win32_background.cpp)
+endif()
+# TODO: For win32 later we want to set this as a win32 app
+add_executable(wall_art ${SOURCE_FILES})
+
+target_link_libraries(wall_art Qt5::Widgets Qt5::Network)
+install(TARGETS wall_art DESTINATION bin)
 
