@@ -37,5 +37,7 @@ target_link_libraries(wall_art Qt5::Widgets Qt5::Network)
 set_target_properties(wall_art PROPERTIES
 	CXX_STANDARD 14
 	CXX_STANDARD_REQUIRED ON)
+
 install(TARGETS wall_art DESTINATION bin)
+install(FILES xfce.sh DESTINATION bin)
 
