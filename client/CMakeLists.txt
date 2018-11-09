@@ -24,7 +24,7 @@ set(SOURCE_FILES main.cpp wall_art_app.cpp image_downloader.cpp background_build
 if (WIN32)
 	set(SOURCE_FILES ${SOURCE_FILES} win32_background.cpp)
 elseif (APPLE)
-	message(FATAL_ERROR "Apple todo")
+	set(SOURCE_FILES ${SOURCE_FILES} osx_background.mm osx_background_shim.cpp)
 elseif (UNIX)
 	set(SOURCE_FILES ${SOURCE_FILES} linux_background.cpp)
 else()
@@ -34,6 +34,9 @@ endif()
 add_executable(wall_art ${SOURCE_FILES})
 
 target_link_libraries(wall_art Qt5::Widgets Qt5::Network)
+if (APPLE)
+	target_link_libraries(wall_art "-framework AppKit")
+endif()
 set_target_properties(wall_art PROPERTIES
 	CXX_STANDARD 14
 	CXX_STANDARD_REQUIRED ON)

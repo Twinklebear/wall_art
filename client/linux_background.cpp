@@ -4,7 +4,7 @@
 #include <memory>
 #include <QProcess>
 #include <QCoreApplication>
-#include "linux_background.h"
+#include "set_background.h"
 
 const static std::unordered_map<std::string, std::string> managers{
 	{"gsettings", "set org.gnome.desktop.background picture-uri file://%s"},

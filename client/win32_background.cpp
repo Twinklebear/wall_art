@@ -1,6 +1,6 @@
 #include <string>
 #include <windows.h>
-#include "win32_background.h"
+#include "set_background.h"
 
 bool set_background(const QString &path){
 	std::wstring wstring = path.toStdWString();

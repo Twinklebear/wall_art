@@ -79,3 +79,4 @@ ipch/
 Lesson*/Debug
 Lesson*/Release
 out/
+.DS_Store
