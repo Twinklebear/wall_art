@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdint>
 #include <string>
+#include <ctime>
 
 #include <QNetworkRequest>
 #include <QUrl>
@@ -92,8 +93,15 @@ void WallArtApp::image_downloaded(ImageResult result){
 }
 void WallArtApp::background_built(QSharedPointer<QImage> background){
 	std::cout << "WallArt has recieved the background image, setting to background\n";
-	QString path = QDir::toNativeSeparators(QDir::tempPath() + "/background.jpg");
-	std::cout << "path = " << path.toStdString() << "\n";
+	// ISO 8601 time formatting
+	char buf[32] = {0};
+	time_t now;
+	time(&now);
+	strftime(buf, sizeof(buf), "%Y%m%dT%H%M%SZ", gmtime(&now));
+	const QString path = QDir::toNativeSeparators(QDir::tempPath()
+			+ "/wall-art-app-background-" + QString::fromUtf8(buf) + ".jpg");
+	background->save(path, "JPEG", 80);
+	std::cout << "background saved\n";
 	if (!set_background(path)){
 		std::cout << "Error setting background\n";
 	}
