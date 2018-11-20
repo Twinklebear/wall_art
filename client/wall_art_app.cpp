@@ -98,7 +98,7 @@ void WallArtApp::background_built(QSharedPointer<QImage> background){
 	time_t now;
 	time(&now);
 	strftime(buf, sizeof(buf), "%Y%m%dT%H%M%SZ", gmtime(&now));
-	const QString path = QDir::toNativeSeparators(QDir::tempPath()
+	const QString path = QDir::toNativeSeparators(applicationDirPath()
 			+ "/wall-art-app-background-" + QString::fromUtf8(buf) + ".jpg");
 	background->save(path, "JPEG", 80);
 	std::cout << "background saved\n";
